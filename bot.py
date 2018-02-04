@@ -10,14 +10,16 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
-DIRECTION, DATETIME, DESTINATION, PASSENGERS, DONE, LISTALLSHARES = range(6)
+
+# PROPERTIES
+DIRECTION, DATETIME, DESTINATION, PASSENGERS, DONE = range(5)
 
 share_or_find_keyboard = [['Share your ride', 'Find ride']]
-direction_keyboard = [['To Moscow', 'To Nahabino'],
-                      ['From Moscow', 'From Nahabino']]
+direction_keyboard = [['From PK', 'To PK']]
 
 rides_dict = {}
 
+# HELPER METHODS
 def facts_to_str(user_data):
     facts = list()
 
@@ -26,6 +28,8 @@ def facts_to_str(user_data):
 
     return "\n".join(facts).join(['\n', '\n'])
 
+
+# CONVERSATION HANDLERS
 def start(bot, update):
     """Send a message when the command /start is issued."""
 
@@ -54,21 +58,13 @@ def start_finding(bot, update, user_data):
     user_data['isSharing'] = False
     return DIRECTION
 
-def type(bot, update, user_data):
-    text = update.message.text
-    user_data['isSharing'] = text == share_or_find_keyboard[0][0]
-
-    update.message.reply_text('Select direction please',
-                              reply_markup=ReplyKeyboardMarkup(direction_keyboard))
-    return DIRECTION
-
 def direction(bot, update, user_data):
     text = update.message.text
     user_data['ride_direction'] = text
 
     if user_data['isSharing'] == True:
         update.message.reply_text('Enter date and time please in format: 01.01.2018 11:11',
-                                  reply_markup=ReplyKeyboardRemove())
+                                  reply_markup=ReplyKeyboardMarkup([['ближайшее время']]))
 
         del user_data['isSharing']
         return DATETIME
@@ -80,14 +76,16 @@ def datetime(bot, update, user_data):
     text = update.message.text
     user_data['ride_datetime'] = text
 
-    update.message.reply_text('Enter your destination metro station (eg: Tushinskaya)')
+    update.message.reply_text('Enter your destination (eg: Tushinskaya, Globus)',
+                              reply_markup = ReplyKeyboardMarkup([['Moscow', 'Nahabino', 'Globus']]))
     return DESTINATION
 
 def destination(bot, update, user_data):
     text = update.message.text
     user_data['ride_destination'] = text
 
-    update.message.reply_text('Enter passengers count you can drive')
+    update.message.reply_text('Enter passengers count you can drive',
+                              reply_markup=ReplyKeyboardMarkup([['1', '2', '3', '4'],['4+']]))
     return PASSENGERS
 
 def passengers(bot, update, user_data):
@@ -95,7 +93,8 @@ def passengers(bot, update, user_data):
     user_data['ride_passengers'] = text
 
     update.message.reply_text("You've created ride with parameters:"
-                              "{}".format(facts_to_str(user_data)))
+                              "{}".format(facts_to_str(user_data)),
+                              reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
     print(rides_dict)
     print(update.message.from_user)
@@ -119,9 +118,6 @@ def passengers(bot, update, user_data):
     return ConversationHandler.END
 
 def list_all_shares(bot, update, user_data):
-    update.message.reply_text("You asked to find rides with params:"
-                              "{}".format(facts_to_str(user_data)),
-                              reply_markup=ReplyKeyboardRemove())
 
     suitable_rides = []
 
@@ -131,15 +127,14 @@ def list_all_shares(bot, update, user_data):
         if val['ride_direction'] == user_data['ride_direction']:
             suitable_rides.append(rides_dict[key])
 
-
+    outstr = ''
     if len(suitable_rides) > 0:
-        outstr = ''
         for ride in suitable_rides:
             outstr = ride['ride_destination'] + ' ' + str(ride['user_id']) + '\n'
-        update.message.reply_text(outstr)
     else:
-        update.message.reply_text("No suitable rides to {}".format(user_data['ride_direction']), reply_markup=ReplyKeyboardRemove())
+        outstr = "No rides {}".format(user_data['ride_direction'])
 
+    update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
     user_data.clear()
     return ConversationHandler.END
@@ -162,6 +157,7 @@ def cancel(bot, update):
     return ConversationHandler.END
 
 
+# COMMANDS HANDLERS
 def help(bot, update):
     """Send a message when the command /help is issued."""
     update.message.reply_text('Use menu please')
@@ -174,6 +170,8 @@ def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
 
+
+# MAIN
 def main():
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(secrets.token)
@@ -181,30 +179,11 @@ def main():
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-
-        states={
-            # TYPE: [RegexHandler('^(Share your ride|Find ride)$', type, pass_user_data=True)],
-
-            DIRECTION: [RegexHandler('^(To Moscow|To Nahabino|From Moscow|From Nahabino)$', direction, pass_user_data=True)],
-            DATETIME: [MessageHandler(Filters.text, datetime, pass_user_data=True)],
-            DESTINATION: [MessageHandler(Filters.text, destination, pass_user_data=True)],
-            PASSENGERS: [MessageHandler(Filters.text, passengers, pass_user_data=True)],
-
-        },
-
-        fallbacks=[CommandHandler('cancel', cancel),
-                   RegexHandler('^Done$', done, pass_user_data=True)]
-    )
-
     ride_share_conv_handler = ConversationHandler(
         entry_points=[RegexHandler('^Share your ride$', start_sharing, pass_user_data=True)],
 
         states={
-            DIRECTION: [
-                RegexHandler('^(To Moscow|To Nahabino|From Moscow|From Nahabino)$', direction, pass_user_data=True)],
+            DIRECTION: [RegexHandler('^(From PK|To PK)$', direction, pass_user_data=True)],
             DATETIME: [MessageHandler(Filters.text, datetime, pass_user_data=True)],
             DESTINATION: [MessageHandler(Filters.text, destination, pass_user_data=True)],
             PASSENGERS: [MessageHandler(Filters.text, passengers, pass_user_data=True)],
@@ -221,8 +200,7 @@ def main():
         entry_points=[RegexHandler('^Find ride$', start_finding, pass_user_data=True)],
 
         states={
-            DIRECTION: [
-                RegexHandler('^(To Moscow|To Nahabino|From Moscow|From Nahabino)$', direction, pass_user_data=True)],
+            DIRECTION: [RegexHandler('^(From PK|To PK)$', direction, pass_user_data=True)],
         },
 
         fallbacks=[CommandHandler('cancel', cancel),
@@ -235,11 +213,6 @@ def main():
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
     # dp.add_handler(CommandHandler("help", help))
-    # dp.add_handler(CommandHandler("subnet", parse_ip,
-    #                               pass_args=True,
-    #                               pass_chat_data=True))
-
-
 
     # on noncommand i.e message - echo the message on Telegram
     # dp.add_handler(MessageHandler(Filters.text, echo))
