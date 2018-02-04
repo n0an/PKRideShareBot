@@ -30,6 +30,12 @@ def facts_to_str(user_data):
 
     return "\n".join(facts).join(['\n', '\n'])
 
+def safe_cast(val, to_type, default=None):
+    try:
+        return to_type(val)
+    except (ValueError, TypeError):
+        return default
+
 
 # CONVERSATION HANDLERS
 def start(bot, update):
@@ -43,7 +49,6 @@ def start(bot, update):
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False))
 
 def start_sharing(bot, update, user_data):
-    """Send a message when the command /start is issued."""
 
     update.message.reply_text('Create share: Select direction please',
                               reply_markup=ReplyKeyboardMarkup(direction_keyboard))
@@ -52,7 +57,6 @@ def start_sharing(bot, update, user_data):
     return DIRECTION
 
 def start_finding(bot, update, user_data):
-    """Send a message when the command /start is issued."""
 
     update.message.reply_text('Finding shares: Select direction please',
                               reply_markup=ReplyKeyboardMarkup(direction_keyboard))
@@ -92,7 +96,7 @@ def destination(bot, update, user_data):
 
 def passengers(bot, update, user_data):
     text = update.message.text
-    user_data['ride_passengers'] = text
+    user_data['ride_passengers'] = safe_cast(text, int, 0)
 
     location_keyboard = KeyboardButton(text="Send Contact", request_contact = True)
 
@@ -175,11 +179,14 @@ def list_all_shares(bot, update, user_data):
 
             datetimeinfo = ride['ride_datetime']
 
-            passengers_info = str(int(ride['ride_passengers']) - int(ride['requests_rides'])) + ' из ' + str(ride['ride_passengers']) + ' мест доступно'
+            passengers_info = str(ride['ride_passengers'] - ride['requests_rides']) + ' из ' + str(ride['ride_passengers']) + ' мест доступно'
 
             outstr += str(num) + '. ' + ride['ride_destination'] + ', ' +\
-                      ' ' + ' ' + datetimeinfo + ', ' +\
-                      ' ' + passengers_info + '\n'
+                      ' ' + ' ' + datetimeinfo + ', '
+
+            if ride['ride_passengers'] != 0:
+                outstr += ' ' + passengers_info + '\n'
+
             keyboard.append(str(num))
 
         update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup([keyboard]))
@@ -213,12 +220,17 @@ def select_ride(bot, update, user_data):
 
     outstr += 'Username: @{}'.format(selected_ride['user_name']) + '\n'
 
-    if selected_ride['user_phonenumber'] != None:
-        outstr += 'Phone number: +{}'.format(selected_ride['user_phonenumber']) + '\n'
+    if 'user_phonenumber' in selected_ride.keys():
+        phone_number = selected_ride['user_phonenumber']
 
-    passengers_info = str(int(selected_ride['ride_passengers']) - int(selected_ride['requests_rides'])) + ' из ' + str(selected_ride['ride_passengers'])
+        if phone_number[:1] != '+':
+            phone_number = '+' + phone_number
+        outstr += 'Phone number: {}'.format(selected_ride['user_phonenumber']) + '\n'
 
-    outstr += 'Мест свободно: {}'.format(passengers_info)
+    passengers_info = str(selected_ride['ride_passengers'] - selected_ride['requests_rides']) + ' из ' + str(selected_ride['ride_passengers'])
+
+    if selected_ride['ride_passengers'] != 0:
+        outstr += 'Мест свободно: {}'.format(passengers_info)
 
     update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
@@ -229,18 +241,13 @@ def select_ride(bot, update, user_data):
 
 def done(bot, update, user_data):
 
-    update.message.reply_text("I learned these facts about you:"
-                              "{}"
-                              "Until next time!".format(facts_to_str(user_data)))
+    update.message.reply_text('Отменено', reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
     user_data.clear()
     return ConversationHandler.END
 
 def cancel(bot, update):
-    user = update.message.from_user
-    logger.info("User %s canceled the conversation.", user.first_name)
-    update.message.reply_text('Bye! I hope we can talk again some day.',
-                              reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text('Отменено', reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
     return ConversationHandler.END
 
