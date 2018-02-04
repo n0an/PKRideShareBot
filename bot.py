@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 # PROPERTIES
 DIRECTION, DATETIME, DESTINATION, PASSENGERS, DONE = range(5)
 
+F_DIRECTION, F_SELECT_RIDE = range(2)
+
 share_or_find_keyboard = [['Share your ride', 'Find ride']]
 direction_keyboard = [['From PK', 'To PK']]
 
@@ -56,7 +58,7 @@ def start_finding(bot, update, user_data):
                               reply_markup=ReplyKeyboardMarkup(direction_keyboard))
 
     user_data['isSharing'] = False
-    return DIRECTION
+    return F_DIRECTION
 
 def direction(bot, update, user_data):
     text = update.message.text
@@ -105,6 +107,8 @@ def passengers(bot, update, user_data):
         ride[key] = val
 
     ride['user_id'] = update.message.from_user.id
+    ride['user_name'] = update.message.from_user.username
+    ride['requests_rides'] = 0
 
     if rides_dict:
         ride_id = max(rides_dict.keys()) + 1
@@ -129,15 +133,67 @@ def list_all_shares(bot, update, user_data):
 
     outstr = ''
     if len(suitable_rides) > 0:
-        for ride in suitable_rides:
-            outstr = ride['ride_destination'] + ' ' + str(ride['user_id']) + '\n'
+        outstr += 'Select ride:\n'
+
+        keyboard = []
+
+        for index in range(len(suitable_rides)):
+            ride = suitable_rides[index]
+
+            num = index + 1
+
+            datetimeinfo = ride['ride_datetime']
+
+            passengers_info = str(int(ride['ride_passengers']) - int(ride['requests_rides'])) + ' из ' + str(ride['ride_passengers']) + ' мест доступно'
+
+            outstr += str(num) + '. ' + ride['ride_destination'] + ', ' +\
+                      ' ' + ' ' + datetimeinfo + ', ' +\
+                      ' ' + passengers_info + '\n'
+            keyboard.append(str(num))
+
+        update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup([keyboard]))
+        user_data['rides_for_select'] = suitable_rides
+
+        print('suitable_rides = ', suitable_rides)
+
+        return F_SELECT_RIDE
     else:
         outstr = "No rides {}".format(user_data['ride_direction'])
 
-    update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+        update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+        user_data.clear()
+
+        return ConversationHandler.END
+
+
+def select_ride(bot, update, user_data):
+
+    text = update.message.text
+
+    suitable_rides = user_data['rides_for_select']
+
+    selected_ride = suitable_rides[int(text) - 1]
+
+    outstr = 'You selected ride # {}'.format(text) + '\n'
+
+    outstr += 'Destination: {}'.format(selected_ride['ride_destination']) + '\n'
+
+    outstr += 'Start time: {}'.format(selected_ride['ride_datetime']) + '\n'
+
+    outstr += 'Username: @{}'.format(selected_ride['user_name']) + '\n'
+
+    passengers_info = str(int(selected_ride['ride_passengers']) - int(selected_ride['requests_rides'])) + ' из ' + str(selected_ride['ride_passengers'])
+
+    outstr += 'Мест свободно: {}'.format(passengers_info)
+
+
+    update.message.reply_text(outstr)
+
 
     user_data.clear()
+
     return ConversationHandler.END
+
 
 def done(bot, update, user_data):
 
@@ -200,7 +256,9 @@ def main():
         entry_points=[RegexHandler('^Find ride$', start_finding, pass_user_data=True)],
 
         states={
-            DIRECTION: [RegexHandler('^(From PK|To PK)$', direction, pass_user_data=True)],
+            F_DIRECTION: [RegexHandler('^(From PK|To PK)$', direction, pass_user_data=True)],
+            F_SELECT_RIDE: [MessageHandler(Filters.text, select_ride, pass_user_data=True)]
+
         },
 
         fallbacks=[CommandHandler('cancel', cancel),
