@@ -1,4 +1,4 @@
-from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
+from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
 import logging
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 # PROPERTIES
-DIRECTION, DATETIME, DESTINATION, PASSENGERS, DONE = range(5)
+DIRECTION, DATETIME, DESTINATION, PASSENGERS, CONTACT = range(5)
 
 F_DIRECTION, F_SELECT_RIDE = range(2)
 
@@ -94,9 +94,36 @@ def passengers(bot, update, user_data):
     text = update.message.text
     user_data['ride_passengers'] = text
 
+    location_keyboard = KeyboardButton(text="Send Contact", request_contact = True)
+
+    update.message.reply_text('Add your contact or enter /skip',
+                              reply_markup = ReplyKeyboardMarkup([[ location_keyboard ], ['/skip']]))
+
+    return CONTACT
+
+def contact(bot, update, user_data):
+    user_contact = update.message.contact
+
+    logging.info("Contact is {}".format(user_contact))
+
+    user_data['user_phonenumber'] = user_contact['phone_number']
+
     update.message.reply_text("You've created ride with parameters:"
                               "{}".format(facts_to_str(user_data)),
                               reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+
+    return create_ride(update, user_data)
+
+def skip_contact(bot, update, user_data):
+    update.message.reply_text("You've created ride with parameters:"
+                              "{}".format(facts_to_str(user_data)),
+                              reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+
+
+    return create_ride(update, user_data)
+
+
+def create_ride(update, user_data):
 
     print(rides_dict)
     print(update.message.from_user)
@@ -120,6 +147,10 @@ def passengers(bot, update, user_data):
     user_data.clear()
 
     return ConversationHandler.END
+
+
+
+# =========== FIND RIDE ========
 
 def list_all_shares(bot, update, user_data):
 
@@ -182,13 +213,14 @@ def select_ride(bot, update, user_data):
 
     outstr += 'Username: @{}'.format(selected_ride['user_name']) + '\n'
 
+    if selected_ride['user_phonenumber'] != None:
+        outstr += 'Phone number: +{}'.format(selected_ride['user_phonenumber']) + '\n'
+
     passengers_info = str(int(selected_ride['ride_passengers']) - int(selected_ride['requests_rides'])) + ' из ' + str(selected_ride['ride_passengers'])
 
     outstr += 'Мест свободно: {}'.format(passengers_info)
 
-
-    update.message.reply_text(outstr)
-
+    update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
     user_data.clear()
 
@@ -243,6 +275,8 @@ def main():
             DATETIME: [MessageHandler(Filters.text, datetime, pass_user_data=True)],
             DESTINATION: [MessageHandler(Filters.text, destination, pass_user_data=True)],
             PASSENGERS: [MessageHandler(Filters.text, passengers, pass_user_data=True)],
+            CONTACT: [MessageHandler(Filters.contact, contact, pass_user_data=True),
+                      CommandHandler('skip', skip_contact, pass_user_data=True)]
 
         },
 
