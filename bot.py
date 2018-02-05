@@ -5,6 +5,7 @@ import logging
 import secrets
 
 import database_manager
+import datetime
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -100,7 +101,7 @@ def show_my_rides(bot, update, user_data):
     user_data['my_rides'] = my_rides
 
     update.message.reply_text(outstr,
-                              reply_markup=ReplyKeyboardMarkup([['Удалить мои поездки']]))
+                              reply_markup=ReplyKeyboardMarkup([['Удалить мои поездки'], ['Главное меню']]))
 
     return M_RIDES
 
@@ -133,7 +134,7 @@ def direction(bot, update, user_data):
         del user_data['isSharing']
         return list_all_shares(bot, update, user_data)
 
-def datetime(bot, update, user_data):
+def setdatetime(bot, update, user_data):
     text = update.message.text
     user_data['ride_datetime'] = text
 
@@ -230,7 +231,8 @@ def create_ride(update, user_data):
                  ride['requests_rides'],
                  phonenumber,
                  ride['user_id'],
-                 ride['user_name'])
+                 ride['user_name'],
+                 str(datetime.datetime.now()))
 
 
 
@@ -399,8 +401,8 @@ def cancel(bot, update):
 def main():
 
     # ---- USE ONLY ONCE TO CREATE AND CONFIGURE DB ----
-    # create_db()
-    # create_db_table()
+    # database_manager.create_db()
+    # database_manager.create_db_table()
     # --------------------------------------------------
 
     # Create the EventHandler and pass it your bot's token.
@@ -414,7 +416,7 @@ def main():
 
         states={
             DIRECTION: [RegexHandler('^(Из ПК|В ПК)$', direction, pass_user_data=True)],
-            DATETIME: [MessageHandler(Filters.text, datetime, pass_user_data=True)],
+            DATETIME: [MessageHandler(Filters.text, setdatetime, pass_user_data=True)],
             DESTINATION: [MessageHandler(Filters.text, destination, pass_user_data=True)],
             PASSENGERS: [MessageHandler(Filters.text, passengers, pass_user_data=True)],
             CONTACT: [MessageHandler(Filters.contact, contact, pass_user_data=True),

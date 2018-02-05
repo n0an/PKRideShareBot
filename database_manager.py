@@ -22,12 +22,13 @@ def create_db_table():
             requests      INT,
             phonenumber   TEXT,
             user_id       INT,
-            user_name     TEXT
+            user_name     TEXT,
+            createdat     TEXT
           );
         """)
 
 # INSERT TO DB TABLE
-def insert_to_db(ride_id, direction, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name):
+def insert_to_db(ride_id, direction, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name, createdat):
     with sqlite3.connect(db_filename) as conn:
         conn.execute("""
           INSERT INTO ride (id,
@@ -38,8 +39,9 @@ def insert_to_db(ride_id, direction, destination, dateandtime, passengers, reque
                            requests,
                            phonenumber,
                            user_id,
-                           user_name)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+                           user_name,
+                           createdat)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
             '{}'.format(ride_id),
             '{}'.format(direction),
             '{}'.format(destination),
@@ -49,6 +51,7 @@ def insert_to_db(ride_id, direction, destination, dateandtime, passengers, reque
             '{}'.format(phonenumber),
             '{}'.format(user_id),
             '{}'.format(user_name),
+            '{}'.format(createdat)
             )
         )
 
