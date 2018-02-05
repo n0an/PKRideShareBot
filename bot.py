@@ -342,7 +342,7 @@ def select_ride(bot, update, user_data):
     if selected_ride['ride_passengers'] != 0:
         database_manager.increment_requests_count(selected_ride['ride_id'], selected_ride['requests_rides'] + 1)
 
-        seats_count = max(0, selected_ride['ride_passengers'] - selected_ride['requests_rides'] - 1)
+        seats_count = max(0, selected_ride['ride_passengers'] - selected_ride['requests_rides'])
 
         passengers_info = str(seats_count) + ' из ' + str(selected_ride['ride_passengers'])
 
