@@ -118,7 +118,7 @@ def get_max_id_from_table():
         return maximum_id
 
 # ==============================================
-# ================== HELPER METHODS ============
+# =============== HELPER METHODS ===============
 # ==============================================
 def facts_to_str(user_data):
     facts = list()
@@ -273,15 +273,13 @@ def create_ride(update, user_data):
     return ConversationHandler.END
 
 
-
-# =========== FIND RIDE ========
+# -------------- FIND RIDE --------------
 
 def list_all_shares(bot, update, user_data):
 
     suitable_rides = get_rides_from_table(user_data['ride_direction'])
 
     print(suitable_rides)
-
 
     outstr = ''
     if len(suitable_rides) > 0:
@@ -356,20 +354,7 @@ def select_ride(bot, update, user_data):
     return ConversationHandler.END
 
 
-def done(bot, update, user_data):
-
-    update.message.reply_text('Отменено', reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
-
-    user_data.clear()
-    return ConversationHandler.END
-
-def cancel(bot, update):
-    update.message.reply_text('Отменено', reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
-
-    return ConversationHandler.END
-
-
-# COMMANDS HANDLERS
+# --------------- COMMANDS HANDLERS --------------
 def help(bot, update):
     """Send a message when the command /help is issued."""
     update.message.reply_text('Use menu please')
@@ -382,8 +367,22 @@ def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
 
+def done(bot, update, user_data):
 
-# MAIN
+    update.message.reply_text('Отменено', reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+
+    user_data.clear()
+    return ConversationHandler.END
+
+def cancel(bot, update):
+    update.message.reply_text('Отменено', reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+    return ConversationHandler.END
+
+
+# ==============================================
+# ==================== MAIN ====================
+# ==============================================
+
 def main():
 
     # ---- USE ONLY ONCE TO CREATE AND CONFIGURE DB ----
