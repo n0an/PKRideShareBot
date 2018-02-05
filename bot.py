@@ -165,6 +165,7 @@ def create_ride(update, user_data):
         ride[key] = val
 
     ride['user_id'] = update.message.from_user.id
+    ride['user_name'] = update.message.from_user.username
     ride['requests_rides'] = 0
 
 
@@ -211,7 +212,11 @@ def list_all_shares(bot, update, user_data):
     if len(suitable_rides) > 0:
         outstr += 'Выберите поездку (введите номер или нажмите на одну из кнопок):\n'
 
+        keyboard_row = []
+
         keyboard = []
+
+        # row_index = 0
 
         for index in range(len(suitable_rides)):
             ride = suitable_rides[index]
@@ -228,9 +233,16 @@ def list_all_shares(bot, update, user_data):
             if ride['ride_passengers'] != 0:
                 outstr += ', ' + passengers_info + '\n'
 
-            keyboard.append(str(num))
+            keyboard_row.append(str(num))
 
-        update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup([keyboard]))
+            if num % 4 == 0:
+                # row_index += 1
+                keyboard.append(keyboard_row)
+                keyboard_row = []
+
+        keyboard.append(keyboard_row)
+
+        update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(keyboard))
         user_data['rides_for_select'] = suitable_rides
 
         print('suitable_rides = ', suitable_rides)
