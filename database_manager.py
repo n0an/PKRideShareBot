@@ -52,7 +52,7 @@ def insert_to_db(ride_id, direction, destination, dateandtime, passengers, reque
             )
         )
 
-# GET FROM DB TABLE
+# GET NOT MY RIDES FROM DB TABLE
 def get_rides_from_table(user_id, direc):
     with sqlite3.connect(db_filename) as conn:
         conn.row_factory = sqlite3.Row
@@ -83,6 +83,47 @@ def get_rides_from_table(user_id, direc):
             suitable_rides.append(ride)
 
         return suitable_rides
+
+# GET MY RIDES FROM DB TABLE
+def get_my_rides_from_table(user_id):
+    with sqlite3.connect(db_filename) as conn:
+        conn.row_factory = sqlite3.Row
+
+        params = (user_id, )
+
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM ride WHERE user_id = ?", params)
+
+        suitable_rides = []
+
+        for row in cur.fetchall():
+            print(row)
+            id, directn, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name = row
+
+            ride = {}
+
+            ride['ride_direction'] = directn
+            ride['ride_destination'] = destination
+            ride['ride_datetime'] = dateandtime
+            ride['ride_passengers'] = passengers
+            ride['requests_rides'] = requests
+            ride['user_phonenumber'] = phonenumber
+            ride['user_id'] = user_id
+            ride['user_name'] = user_name
+
+            suitable_rides.append(ride)
+
+        return suitable_rides
+
+# DELETE MY RIDES
+def delete_my_rides_from_table(user_id):
+    with sqlite3.connect(db_filename) as conn:
+
+        params = (user_id,)
+
+        cur = conn.cursor()
+        cur.execute("DELETE FROM ride WHERE user_id = ?", params)
+
 
 # GET MAX ID
 def get_max_id_from_table():

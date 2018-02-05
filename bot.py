@@ -20,7 +20,9 @@ DIRECTION, DATETIME, DESTINATION, PASSENGERS, CONTACT = range(5)
 
 F_DIRECTION, F_SELECT_RIDE = range(2)
 
-share_or_find_keyboard = [['Создать поездку', 'Найти поездку']]
+M_RIDES = 0
+
+share_or_find_keyboard = [['Создать поездку', 'Найти поездку'], ['Мои поездки']]
 direction_keyboard = [['Из ПК', 'В ПК'], ['Главное меню']]
 
 contact_keyboard_button = KeyboardButton(text="Показать телефон", request_contact=True)
@@ -48,15 +50,6 @@ def safe_cast(val, to_type, default=None):
 # =========== CONVERSATION HANDLERS ============
 # ==============================================
 
-def start(bot, update):
-    """Send a message when the command /start is issued."""
-
-    reply_keyboard = share_or_find_keyboard
-    user = update.message.from_user
-    update.message.reply_text('Приветствую, ' + user.first_name + '!\n'
-                              'Я - бот, который поможет Вам найти нужную поездку, или'
-                              ' подвезти соседей :)',
-                              reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False))
 
 def start_sharing(bot, update, user_data):
 
@@ -73,6 +66,54 @@ def start_finding(bot, update, user_data):
 
     user_data['isSharing'] = False
     return F_DIRECTION
+
+def show_my_rides(bot, update, user_data):
+
+    my_rides = database_manager.get_my_rides_from_table(update.message.from_user.id)
+
+    if len(my_rides) == 0:
+        update.message.reply_text('Вы пока не создали ни одной поездки',
+                                  reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+        user_data.clear()
+
+        return ConversationHandler.END
+
+    outstr = 'Созданные Вами поездки:\n'
+
+    for index in range(len(my_rides)):
+        ride = my_rides[index]
+
+        num = index + 1
+
+        datetimeinfo = ride['ride_datetime']
+
+        passengers_info = str(ride['ride_passengers'] - ride['requests_rides']) + ' из ' + str(
+            ride['ride_passengers']) + ' мест доступно'
+
+        outstr += str(num) + '. ' + ride['ride_destination'] + ', ' + \
+                  ' ' + datetimeinfo
+
+        if ride['ride_passengers'] != 0:
+            outstr += ', ' + passengers_info + '\n'
+
+
+    user_data['my_rides'] = my_rides
+
+    update.message.reply_text(outstr,
+                              reply_markup=ReplyKeyboardMarkup([['Удалить мои поездки']]))
+
+    return M_RIDES
+
+def delete_my_rides(bot, update, user_data):
+
+    database_manager.delete_my_rides_from_table(update.message.from_user.id)
+
+    update.message.reply_text('Ваши поездки удалены...',
+                              reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+    user_data.clear()
+
+    return ConversationHandler.END
+
 
 
 # ------------- CREATE RIDE -----------------
@@ -191,9 +232,21 @@ def create_ride(update, user_data):
                  ride['user_id'],
                  ride['user_name'])
 
-    update.message.reply_text("Вы создали поездку с параметрами:"
-                              "{} \n Спасибо! Ожидайте обращений соседей :)".format(facts_to_str(user_data)),
-                              reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+
+
+    outstr = 'Вы создали поездку {} с параметрами:\n'.format(ride['ride_direction'])
+
+    place_text = 'назначения' if user_data['ride_direction'] == 'Из ПК' else 'отправления'
+
+    outstr += 'Пункт {}: {}'.format(place_text, ride['ride_destination']) + '\n'
+
+    outstr += 'Время отправления: {}'.format(ride['ride_datetime']) + '\n'
+
+    if ride['ride_passengers'] != 0:
+        outstr += 'Пассажиров: {}'.format(ride['ride_passengers'])
+
+    update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
+
 
     user_data.clear()
 
@@ -295,6 +348,18 @@ def select_ride(bot, update, user_data):
 
 
 # --------------- COMMANDS HANDLERS --------------
+
+def start(bot, update):
+    """Send a message when the command /start is issued."""
+
+    reply_keyboard = share_or_find_keyboard
+    user = update.message.from_user
+    update.message.reply_text('Приветствую, ' + user.first_name + '!\n'
+                              'Я - бот, который поможет Вам найти нужную поездку, или'
+                              ' подвезти соседей :)',
+                              reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False))
+
+
 def help(bot, update):
     """Send a message when the command /help is issued."""
     update.message.reply_text('Введите команду /start для начала работы с ботом')
@@ -371,6 +436,21 @@ def main():
     )
 
     dp.add_handler(ride_find_conv_handler)
+
+    my_rides_conv_handler = ConversationHandler(
+        entry_points=[RegexHandler('^Мои поездки$', show_my_rides, pass_user_data=True)],
+
+        states={
+            M_RIDES: [RegexHandler('^Удалить мои поездки$', delete_my_rides, pass_user_data=True)],
+
+
+        },
+
+        fallbacks=[CommandHandler('cancel', cancel),
+                   RegexHandler('^Главное меню$', done, pass_user_data=True)]
+    )
+
+    dp.add_handler(my_rides_conv_handler)
 
 
     # on different commands - answer in Telegram
