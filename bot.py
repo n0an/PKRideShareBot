@@ -23,6 +23,8 @@ F_DIRECTION, F_SELECT_RIDE = range(2)
 share_or_find_keyboard = [['Создать поездку', 'Найти поездку']]
 direction_keyboard = [['Из ПК', 'В ПК'], ['Главное меню']]
 
+contact_keyboard_button = KeyboardButton(text="Показать телефон", request_contact=True)
+contact_keyboard = [[ contact_keyboard_button ], ['Пропустить']]
 
 # ==============================================
 # =============== HELPER METHODS ===============
@@ -113,11 +115,10 @@ def passengers(bot, update, user_data):
     text = update.message.text
     user_data['ride_passengers'] = safe_cast(text, int, 0)
 
-    location_keyboard = KeyboardButton(text="Send Contact", request_contact = True)
 
     update.message.reply_text('Поделитесь своим номером телефона, по которому Вам смогут позвонить соседи,'
                               'или нажмите "Пропустить"',
-                              reply_markup = ReplyKeyboardMarkup([[ location_keyboard ], ['Пропустить']]))
+                              reply_markup = ReplyKeyboardMarkup(contact_keyboard))
 
     return CONTACT
 
@@ -128,19 +129,19 @@ def contact(bot, update, user_data):
 
     user_data['user_phonenumber'] = user_contact['phone_number']
 
-    update.message.reply_text("Вы создали поездку с параметрами:"
-                              "{} \n Спасибо! Ожидайте обращений соседей :)".format(facts_to_str(user_data)),
-                              reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
-
     return create_ride(update, user_data)
 
 def skip_contact(bot, update, user_data):
-    update.message.reply_text("Вы создали поездку с параметрами:"
-                              "{} \n Спасибо! Ожидайте обращений соседей :)".format(facts_to_str(user_data)),
-                              reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
-
 
     return create_ride(update, user_data)
+
+
+def check_for_username(update, user_data):
+    print(update.message.from_user)
+
+    print(update.message.from_user.username != None)
+
+    return update.message.from_user.username != None
 
 
 
@@ -149,13 +150,21 @@ def create_ride(update, user_data):
 
     print(update.message.from_user)
 
+    if check_for_username(update, user_data) == False and 'user_phonenumber' not in user_data.keys():
+        update.message.reply_text('Не удалось создать поездку (нет контактов). Расшарьте номер телефона, '
+                                  'либо добавьте имя пользователя в настройках Телеграм:\n'
+                                  '"Настройки -> Выбрать имя пользователя"',
+                                  reply_markup=ReplyKeyboardMarkup([[ contact_keyboard_button ], ['Отменить создание']]))
+
+        return CONTACT
+
+
     ride = {}
 
     for key,val in user_data.items():
         ride[key] = val
 
     ride['user_id'] = update.message.from_user.id
-    ride['user_name'] = update.message.from_user.username
     ride['requests_rides'] = 0
 
 
@@ -165,7 +174,6 @@ def create_ride(update, user_data):
         max_id = 1
 
     ride_id = max_id + 1
-
 
     if 'user_phonenumber' in ride.keys():
         phonenumber = ride['user_phonenumber']
@@ -181,6 +189,10 @@ def create_ride(update, user_data):
                  phonenumber,
                  ride['user_id'],
                  ride['user_name'])
+
+    update.message.reply_text("Вы создали поездку с параметрами:"
+                              "{} \n Спасибо! Ожидайте обращений соседей :)".format(facts_to_str(user_data)),
+                              reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
     user_data.clear()
 
@@ -249,7 +261,8 @@ def select_ride(bot, update, user_data):
 
     outstr += 'Время отправления: {}'.format(selected_ride['ride_datetime']) + '\n'
 
-    outstr += 'Телеграм аккаунт водителя для связи: @{}'.format(selected_ride['user_name']) + '\n'
+    if selected_ride['user_name'] != 'None':
+        outstr += 'Телеграм аккаунт водителя для связи: @{}'.format(selected_ride['user_name']) + '\n'
 
     if selected_ride['user_phonenumber'] != 'no phone number':
         phone_number =  selected_ride['user_phonenumber']
@@ -327,7 +340,8 @@ def main():
         },
 
         fallbacks=[CommandHandler('cancel', cancel),
-                   RegexHandler('^Главное меню$', done, pass_user_data=True)]
+                   RegexHandler('^Главное меню$', done, pass_user_data=True),
+                   RegexHandler('^Отменить создание$', done, pass_user_data=True)]
     )
 
     dp.add_handler(ride_share_conv_handler)
