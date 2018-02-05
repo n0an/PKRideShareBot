@@ -20,8 +20,8 @@ DIRECTION, DATETIME, DESTINATION, PASSENGERS, CONTACT = range(5)
 
 F_DIRECTION, F_SELECT_RIDE = range(2)
 
-share_or_find_keyboard = [['Share your ride', 'Find ride']]
-direction_keyboard = [['From PK', 'To PK']]
+share_or_find_keyboard = [['Создать поездку', 'Найти поездку']]
+direction_keyboard = [['Из ПК', 'В ПК']]
 
 
 # ==============================================
@@ -51,14 +51,14 @@ def start(bot, update):
 
     reply_keyboard = share_or_find_keyboard
     user = update.message.from_user
-    update.message.reply_text('Welcome, ' + user.first_name + '! I\'m bot helping '
-                              'you to find ride you need, or'
-                              ' to share your ride with your neighbours',
+    update.message.reply_text('Приветствую, ' + user.first_name + '\n! Я - бот, который поможет '
+                              'Вам найти нужную поездку, или'
+                              ' подвезти соседей :)',
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False))
 
 def start_sharing(bot, update, user_data):
 
-    update.message.reply_text('Create share: Select direction please',
+    update.message.reply_text('Создание поездки. Выберите направление, пожалуйста',
                               reply_markup=ReplyKeyboardMarkup(direction_keyboard))
 
     user_data['isSharing'] = True
@@ -66,7 +66,7 @@ def start_sharing(bot, update, user_data):
 
 def start_finding(bot, update, user_data):
 
-    update.message.reply_text('Finding shares: Select direction please',
+    update.message.reply_text('Найти поездки. Выберите направление, пожалуйста',
                               reply_markup=ReplyKeyboardMarkup(direction_keyboard))
 
     user_data['isSharing'] = False
@@ -80,8 +80,9 @@ def direction(bot, update, user_data):
     user_data['ride_direction'] = text
 
     if user_data['isSharing'] == True:
-        update.message.reply_text('Enter date and time please in format: 01.01.2018 11:11',
-                                  reply_markup=ReplyKeyboardMarkup([['ближайшее время']]))
+        update.message.reply_text('Введите дату и время в фомате: 01.01.2018 11:11, или нажмите кнопку'
+                                  ' "Ближайшее время"',
+                                  reply_markup=ReplyKeyboardMarkup([['Ближайшее время']]))
 
         del user_data['isSharing']
         return DATETIME
@@ -93,15 +94,16 @@ def datetime(bot, update, user_data):
     text = update.message.text
     user_data['ride_datetime'] = text
 
-    update.message.reply_text('Enter your destination (eg: Tushinskaya, Globus)',
-                              reply_markup = ReplyKeyboardMarkup([['Moscow', 'Nahabino', 'Globus']]))
+    update.message.reply_text('Введите примерный пункт назначения (например: Тушинская, Глобус, Метро и тд),'
+                              ' или нажмите на одну из кнопок ниже',
+                              reply_markup = ReplyKeyboardMarkup([['Москва', 'Нахабино', 'Глобус']]))
     return DESTINATION
 
 def destination(bot, update, user_data):
     text = update.message.text
     user_data['ride_destination'] = text
 
-    update.message.reply_text('Enter passengers count you can drive',
+    update.message.reply_text('Выберите количество пассажиров, которое можете подвезти',
                               reply_markup=ReplyKeyboardMarkup([['1', '2', '3', '4'],['4+']]))
     return PASSENGERS
 
@@ -111,8 +113,9 @@ def passengers(bot, update, user_data):
 
     location_keyboard = KeyboardButton(text="Send Contact", request_contact = True)
 
-    update.message.reply_text('Add your contact or enter /skip',
-                              reply_markup = ReplyKeyboardMarkup([[ location_keyboard ], ['/skip']]))
+    update.message.reply_text('Поделитесь своим номером телефона, по которому Вам смогут позвонить соседи,'
+                              'или нажмите "Пропустить"',
+                              reply_markup = ReplyKeyboardMarkup([[ location_keyboard ], ['Пропустить']]))
 
     return CONTACT
 
@@ -123,19 +126,21 @@ def contact(bot, update, user_data):
 
     user_data['user_phonenumber'] = user_contact['phone_number']
 
-    update.message.reply_text("You've created ride with parameters:"
-                              "{}".format(facts_to_str(user_data)),
+    update.message.reply_text("Вы создали поездку с параметрами:"
+                              "{} \n Спасибо! Ожидайте обращений соседей :)".format(facts_to_str(user_data)),
                               reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
     return create_ride(update, user_data)
 
 def skip_contact(bot, update, user_data):
-    update.message.reply_text("You've created ride with parameters:"
-                              "{}".format(facts_to_str(user_data)),
+    update.message.reply_text("Вы создали поездку с параметрами:"
+                              "{} \n Спасибо! Ожидайте обращений соседей :)".format(facts_to_str(user_data)),
                               reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 
 
     return create_ride(update, user_data)
+
+
 
 
 def create_ride(update, user_data):
@@ -165,7 +170,7 @@ def create_ride(update, user_data):
     else:
         phonenumber = 'no phone number'
 
-        database_manager.insert_to_db(ride_id,
+    database_manager.insert_to_db(ride_id,
                  ride['ride_direction'],
                  ride['ride_destination'],
                  ride['ride_datetime'],
@@ -190,7 +195,7 @@ def list_all_shares(bot, update, user_data):
 
     outstr = ''
     if len(suitable_rides) > 0:
-        outstr += 'Select ride:\n'
+        outstr += 'Выберите поездку (введите номер или нажмите на одну из кнопок):\n'
 
         keyboard = []
 
@@ -204,10 +209,10 @@ def list_all_shares(bot, update, user_data):
             passengers_info = str(ride['ride_passengers'] - ride['requests_rides']) + ' из ' + str(ride['ride_passengers']) + ' мест доступно'
 
             outstr += str(num) + '. ' + ride['ride_destination'] + ', ' +\
-                      ' ' + ' ' + datetimeinfo + ', '
+                      ' ' + datetimeinfo
 
             if ride['ride_passengers'] != 0:
-                outstr += ' ' + passengers_info + '\n'
+                outstr += ', ' + passengers_info + '\n'
 
             keyboard.append(str(num))
 
@@ -218,7 +223,7 @@ def list_all_shares(bot, update, user_data):
 
         return F_SELECT_RIDE
     else:
-        outstr = "No rides {}".format(user_data['ride_direction'])
+        outstr = "Нет созданных поездок {}".format(user_data['ride_direction'])
 
         update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
         user_data.clear()
@@ -234,19 +239,19 @@ def select_ride(bot, update, user_data):
 
     selected_ride = suitable_rides[int(text) - 1]
 
-    outstr = 'You selected ride # {}'.format(text) + '\n'
+    outstr = 'Вы выбрали поездку # {}'.format(text) + '\n'
 
-    outstr += 'Destination: {}'.format(selected_ride['ride_destination']) + '\n'
+    outstr += 'Пункт назначения: {}'.format(selected_ride['ride_destination']) + '\n'
 
-    outstr += 'Start time: {}'.format(selected_ride['ride_datetime']) + '\n'
+    outstr += 'Время отправления: {}'.format(selected_ride['ride_datetime']) + '\n'
 
-    outstr += 'Username: @{}'.format(selected_ride['user_name']) + '\n'
+    outstr += 'Аккаунт в Телеграме для связи: @{}'.format(selected_ride['user_name']) + '\n'
 
     if selected_ride['user_phonenumber'] != 'no phone number':
         phone_number =  selected_ride['user_phonenumber']
         if phone_number[:1] != '+':
             phone_number = '+' + phone_number
-        outstr += 'Phone number: {}'.format(phone_number) + '\n'
+        outstr += 'Телефон для связи: {}'.format(phone_number) + '\n'
 
 
     passengers_info = str(selected_ride['ride_passengers'] - selected_ride['requests_rides']) + ' из ' + str(selected_ride['ride_passengers'])
@@ -264,11 +269,11 @@ def select_ride(bot, update, user_data):
 # --------------- COMMANDS HANDLERS --------------
 def help(bot, update):
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Use menu please')
+    update.message.reply_text('Введите команду /start для начала работы с ботом')
 
 def echo(bot, update):
     """Echo the user message."""
-    update.message.reply_text('Use /help command to get help')
+    update.message.reply_text('Введите команду /start для начала работы с бото')
 
 def error(bot, update, error):
     """Log Errors caused by Updates."""
@@ -304,35 +309,36 @@ def main():
     dp = updater.dispatcher
 
     ride_share_conv_handler = ConversationHandler(
-        entry_points=[RegexHandler('^Share your ride$', start_sharing, pass_user_data=True)],
+        entry_points=[RegexHandler('^Создать поездку$', start_sharing, pass_user_data=True)],
 
         states={
-            DIRECTION: [RegexHandler('^(From PK|To PK)$', direction, pass_user_data=True)],
+            DIRECTION: [RegexHandler('^(Из ПК|В ПК)$', direction, pass_user_data=True)],
             DATETIME: [MessageHandler(Filters.text, datetime, pass_user_data=True)],
             DESTINATION: [MessageHandler(Filters.text, destination, pass_user_data=True)],
             PASSENGERS: [MessageHandler(Filters.text, passengers, pass_user_data=True)],
             CONTACT: [MessageHandler(Filters.contact, contact, pass_user_data=True),
-                      CommandHandler('skip', skip_contact, pass_user_data=True)]
+                      CommandHandler('skip', skip_contact, pass_user_data=True),
+                      RegexHandler('^Пропустить$', skip_contact, pass_user_data=True)]
 
         },
 
         fallbacks=[CommandHandler('cancel', cancel),
-                   RegexHandler('^Done$', done, pass_user_data=True)]
+                   RegexHandler('^Главное меню$', done, pass_user_data=True)]
     )
 
     dp.add_handler(ride_share_conv_handler)
 
     ride_find_conv_handler = ConversationHandler(
-        entry_points=[RegexHandler('^Find ride$', start_finding, pass_user_data=True)],
+        entry_points=[RegexHandler('^Найти поездку$', start_finding, pass_user_data=True)],
 
         states={
-            F_DIRECTION: [RegexHandler('^(From PK|To PK)$', direction, pass_user_data=True)],
+            F_DIRECTION: [RegexHandler('^(Из ПК|В ПК)$', direction, pass_user_data=True)],
             F_SELECT_RIDE: [MessageHandler(Filters.text, select_ride, pass_user_data=True)]
 
         },
 
         fallbacks=[CommandHandler('cancel', cancel),
-                   RegexHandler('^Done$', done, pass_user_data=True)]
+                   RegexHandler('^Главное меню$', done, pass_user_data=True)]
     )
 
     dp.add_handler(ride_find_conv_handler)
