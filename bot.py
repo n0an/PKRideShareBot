@@ -94,7 +94,9 @@ def datetime(bot, update, user_data):
     text = update.message.text
     user_data['ride_datetime'] = text
 
-    update.message.reply_text('Введите примерный пункт назначения (например: Тушинская, Глобус, Метро и тд),'
+    place_text = 'назначения' if user_data['ride_direction'] == 'Из ПК' else 'отправления'
+
+    update.message.reply_text('Введите примерный пункт ' + place_text + ' (например: Тушинская, Глобус, Строгино и тд),'
                               ' или нажмите на одну из кнопок ниже',
                               reply_markup = ReplyKeyboardMarkup([['Москва', 'Нахабино', 'Глобус']]))
     return DESTINATION
@@ -241,7 +243,9 @@ def select_ride(bot, update, user_data):
 
     outstr = 'Вы выбрали поездку # {}'.format(text) + '\n'
 
-    outstr += 'Пункт назначения: {}'.format(selected_ride['ride_destination']) + '\n'
+    place_text = 'назначения' if user_data['ride_direction'] == 'Из ПК' else 'отправления'
+
+    outstr += 'Пункт {}: {}'.format(place_text, selected_ride['ride_destination']) + '\n'
 
     outstr += 'Время отправления: {}'.format(selected_ride['ride_datetime']) + '\n'
 
