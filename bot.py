@@ -204,7 +204,9 @@ def create_ride(update, user_data):
 
 def list_all_shares(bot, update, user_data):
 
-    suitable_rides = database_manager.get_rides_from_table(user_data['ride_direction'])
+    user_id = update.message.from_user.id
+
+    suitable_rides = database_manager.get_rides_from_table(user_id, user_data['ride_direction'])
 
     print(suitable_rides)
 
@@ -215,8 +217,6 @@ def list_all_shares(bot, update, user_data):
         keyboard_row = []
 
         keyboard = []
-
-        # row_index = 0
 
         for index in range(len(suitable_rides)):
             ride = suitable_rides[index]
@@ -236,7 +236,6 @@ def list_all_shares(bot, update, user_data):
             keyboard_row.append(str(num))
 
             if num % 4 == 0:
-                # row_index += 1
                 keyboard.append(keyboard_row)
                 keyboard_row = []
 

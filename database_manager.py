@@ -53,14 +53,14 @@ def insert_to_db(ride_id, direction, destination, dateandtime, passengers, reque
         )
 
 # GET FROM DB TABLE
-def get_rides_from_table(direc):
+def get_rides_from_table(user_id, direc):
     with sqlite3.connect(db_filename) as conn:
         conn.row_factory = sqlite3.Row
 
-        direc = (direc, )
+        params = (direc, user_id)
 
         cur = conn.cursor()
-        cur.execute("SELECT * FROM ride WHERE direction=?", direc)
+        cur.execute("SELECT * FROM ride WHERE direction=? AND user_id <> ?", params)
 
         suitable_rides = []
 
