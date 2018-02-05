@@ -278,7 +278,9 @@ def list_all_shares(bot, update, user_data):
 
             datetimeinfo = ride['ride_datetime']
 
-            passengers_info = str(ride['ride_passengers'] - ride['requests_rides']) + ' из ' + str(ride['ride_passengers']) + ' мест доступно'
+            seats_count = max(0, ride['ride_passengers'] - ride['requests_rides'])
+
+            passengers_info = str(seats_count) + ' из ' + str(ride['ride_passengers']) + ' мест доступно'
 
             outstr += str(num) + '. ' + ride['ride_destination'] + ', ' +\
                       ' ' + datetimeinfo
@@ -335,10 +337,16 @@ def select_ride(bot, update, user_data):
         outstr += 'Телефон водителя для связи: {}'.format(phone_number) + '\n'
 
 
-    passengers_info = str(selected_ride['ride_passengers'] - selected_ride['requests_rides']) + ' из ' + str(selected_ride['ride_passengers'])
-
     if selected_ride['ride_passengers'] != 0:
+        database_manager.increment_requests_count(selected_ride['ride_id'], selected_ride['requests_rides'] + 1)
+
+        seats_count = max(0, selected_ride['ride_passengers'] - selected_ride['requests_rides'] - 1)
+
+        passengers_info = str(seats_count) + ' из ' + str(selected_ride['ride_passengers'])
+
         outstr += 'Мест свободно: {}'.format(passengers_info)
+
+
 
     update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(share_or_find_keyboard))
 

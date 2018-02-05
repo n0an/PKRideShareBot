@@ -69,7 +69,7 @@ def get_rides_from_table(user_id, direc):
             id, directn, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name = row
 
             ride = {}
-
+            ride['ride_id'] = id
             ride['ride_direction'] = directn
             ride['ride_destination'] = destination
             ride['ride_datetime'] = dateandtime
@@ -134,3 +134,10 @@ def get_max_id_from_table():
         (maximum_id,) = cur.fetchone()
 
         return maximum_id
+
+# UPDATE REQUESTS COUNT FOR RIDE
+def increment_requests_count(ride_id, new_requests_count):
+    with sqlite3.connect(db_filename) as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE ride set requests=:requests WHERE id=:ride_id",
+                    {'requests': new_requests_count, 'ride_id': ride_id})
