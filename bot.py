@@ -4,14 +4,18 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
 import logging
 import secrets
 
+import sqlite3
+
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
+# ==============================================
+# ================== PROPERTIES ================
+# ==============================================
 
-# PROPERTIES
 DIRECTION, DATETIME, DESTINATION, PASSENGERS, CONTACT = range(5)
 
 F_DIRECTION, F_SELECT_RIDE = range(2)
@@ -19,9 +23,103 @@ F_DIRECTION, F_SELECT_RIDE = range(2)
 share_or_find_keyboard = [['Share your ride', 'Find ride']]
 direction_keyboard = [['From PK', 'To PK']]
 
-rides_dict = {}
+# ==============================================
+# ================== DB METHODS ================
+# ==============================================
+# DB create
+db_filename = 'rides.db'
+def create_db():
+    conn = sqlite3.connect(db_filename)
+    conn.close()
 
-# HELPER METHODS
+# CREATE TABLE
+def create_db_table():
+    with sqlite3.connect(db_filename) as conn:
+        conn.execute("""
+          CREATE TABLE ride (
+            id            INT PRIMARY KEY,
+            direction     TEXT,
+            destination   TEXT,
+            dateandtime   TEXT,
+            passengers    INT,
+            requests      INT,
+            phonenumber   TEXT,
+            user_id       INT,
+            user_name     TEXT
+          );
+        """)
+
+# INSERT TO DB TABLE
+def insert_to_db(ride_id, direction, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name):
+    with sqlite3.connect(db_filename) as conn:
+        conn.execute("""
+          INSERT INTO ride (id,
+                           direction,
+                           destination, 
+                           dateandtime, 
+                           passengers, 
+                           requests,
+                           phonenumber,
+                           user_id,
+                           user_name)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+            '{}'.format(ride_id),
+            '{}'.format(direction),
+            '{}'.format(destination),
+            '{}'.format(dateandtime),
+            '{}'.format(passengers),
+            '{}'.format(requests),
+            '{}'.format(phonenumber),
+            '{}'.format(user_id),
+            '{}'.format(user_name),
+            )
+        )
+
+# GET FROM DB TABLE
+def get_rides_from_table(direc):
+    with sqlite3.connect(db_filename) as conn:
+        conn.row_factory = sqlite3.Row
+
+        direc = (direc, )
+
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM ride WHERE direction=?", direc)
+
+        suitable_rides = []
+
+        for row in cur.fetchall():
+            print(row)
+            id, directn, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name = row
+
+            ride = {}
+
+            ride['ride_direction'] = directn
+            ride['ride_destination'] = destination
+            ride['ride_datetime'] = dateandtime
+            ride['ride_passengers'] = passengers
+            ride['requests_rides'] = requests
+            ride['user_phonenumber'] = phonenumber
+            ride['user_id'] = user_id
+            ride['user_name'] = user_name
+
+
+            suitable_rides.append(ride)
+
+        return suitable_rides
+
+# GET MAX ID
+def get_max_id_from_table():
+    with sqlite3.connect(db_filename) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT max(id) FROM ride")
+
+        (maximum_id,) = cur.fetchone()
+
+        return maximum_id
+
+# ==============================================
+# ================== HELPER METHODS ============
+# ==============================================
 def facts_to_str(user_data):
     facts = list()
 
@@ -37,7 +135,10 @@ def safe_cast(val, to_type, default=None):
         return default
 
 
-# CONVERSATION HANDLERS
+# ==============================================
+# =========== CONVERSATION HANDLERS ============
+# ==============================================
+
 def start(bot, update):
     """Send a message when the command /start is issued."""
 
@@ -63,6 +164,9 @@ def start_finding(bot, update, user_data):
 
     user_data['isSharing'] = False
     return F_DIRECTION
+
+
+# ------------- CREATE RIDE -----------------
 
 def direction(bot, update, user_data):
     text = update.message.text
@@ -129,7 +233,6 @@ def skip_contact(bot, update, user_data):
 
 def create_ride(update, user_data):
 
-    print(rides_dict)
     print(update.message.from_user)
 
     ride = {}
@@ -141,12 +244,29 @@ def create_ride(update, user_data):
     ride['user_name'] = update.message.from_user.username
     ride['requests_rides'] = 0
 
-    if rides_dict:
-        ride_id = max(rides_dict.keys()) + 1
-    else:
-        ride_id = 1
 
-    rides_dict[ride_id] = ride
+    max_id = get_max_id_from_table()
+
+    if max_id == None:
+        max_id = 1
+
+    ride_id = max_id + 1
+
+
+    if 'user_phonenumber' in ride.keys():
+        phonenumber = ride['user_phonenumber']
+    else:
+        phonenumber = 'no phone number'
+
+    insert_to_db(ride_id,
+                 ride['ride_direction'],
+                 ride['ride_destination'],
+                 ride['ride_datetime'],
+                 ride['ride_passengers'],
+                 ride['requests_rides'],
+                 phonenumber,
+                 ride['user_id'],
+                 ride['user_name'])
 
     user_data.clear()
 
@@ -158,13 +278,10 @@ def create_ride(update, user_data):
 
 def list_all_shares(bot, update, user_data):
 
-    suitable_rides = []
+    suitable_rides = get_rides_from_table(user_data['ride_direction'])
 
-    print('rides_dict = ', rides_dict)
+    print(suitable_rides)
 
-    for key, val in rides_dict.items():
-        if val['ride_direction'] == user_data['ride_direction']:
-            suitable_rides.append(rides_dict[key])
 
     outstr = ''
     if len(suitable_rides) > 0:
@@ -220,12 +337,12 @@ def select_ride(bot, update, user_data):
 
     outstr += 'Username: @{}'.format(selected_ride['user_name']) + '\n'
 
-    if 'user_phonenumber' in selected_ride.keys():
-        phone_number = selected_ride['user_phonenumber']
-
+    if selected_ride['user_phonenumber'] != 'no phone number':
+        phone_number =  selected_ride['user_phonenumber']
         if phone_number[:1] != '+':
             phone_number = '+' + phone_number
-        outstr += 'Phone number: {}'.format(selected_ride['user_phonenumber']) + '\n'
+        outstr += 'Phone number: {}'.format(phone_number) + '\n'
+
 
     passengers_info = str(selected_ride['ride_passengers'] - selected_ride['requests_rides']) + ' из ' + str(selected_ride['ride_passengers'])
 
@@ -268,6 +385,12 @@ def error(bot, update, error):
 
 # MAIN
 def main():
+
+    # ---- USE ONLY ONCE TO CREATE AND CONFIGURE DB ----
+    # create_db()
+    # create_db_table()
+    # --------------------------------------------------
+
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(secrets.token)
 
