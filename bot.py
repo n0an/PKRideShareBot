@@ -179,9 +179,9 @@ def skip_contact(bot, update, user_data):
 
 
 def check_for_username(update, user_data):
-    print(update.message.from_user)
+    # print(update.message.from_user)
 
-    print(update.message.from_user.username != None)
+    # print(update.message.from_user.username != None)
 
     return update.message.from_user.username != None
 
@@ -190,7 +190,7 @@ def check_for_username(update, user_data):
 
 def create_ride(update, user_data):
 
-    print(update.message.from_user)
+    # print(update.message.from_user)
 
     if check_for_username(update, user_data) == False and 'user_phonenumber' not in user_data.keys():
         update.message.reply_text('Не удалось создать поездку (нет контактов). Расшарьте номер телефона, '

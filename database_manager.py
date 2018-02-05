@@ -68,7 +68,7 @@ def get_rides_from_table(user_id, direc):
         suitable_rides = []
 
         for row in cur.fetchall():
-            print(row)
+            # print(row)
             id, directn, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name, createdat = row
 
             ride = {}
@@ -100,7 +100,7 @@ def get_my_rides_from_table(user_id):
         suitable_rides = []
 
         for row in cur.fetchall():
-            print(row)
+            # print(row)
             id, directn, destination, dateandtime, passengers, requests, phonenumber, user_id, user_name, createdat = row
 
             ride = {}
