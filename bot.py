@@ -263,7 +263,7 @@ def list_all_shares(bot, update, user_data):
 
     suitable_rides = database_manager.get_rides_from_table(user_id, user_data['ride_direction'])
 
-    print(suitable_rides)
+    # print(suitable_rides)
 
     outstr = ''
     if len(suitable_rides) > 0:
@@ -301,7 +301,7 @@ def list_all_shares(bot, update, user_data):
         update.message.reply_text(outstr, reply_markup=ReplyKeyboardMarkup(keyboard))
         user_data['rides_for_select'] = suitable_rides
 
-        print('suitable_rides = ', suitable_rides)
+        # print('suitable_rides = ', suitable_rides)
 
         return F_SELECT_RIDE
     else:
