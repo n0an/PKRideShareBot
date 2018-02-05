@@ -21,7 +21,7 @@ DIRECTION, DATETIME, DESTINATION, PASSENGERS, CONTACT = range(5)
 F_DIRECTION, F_SELECT_RIDE = range(2)
 
 share_or_find_keyboard = [['Создать поездку', 'Найти поездку']]
-direction_keyboard = [['Из ПК', 'В ПК']]
+direction_keyboard = [['Из ПК', 'В ПК'], ['Главное меню']]
 
 
 # ==============================================
@@ -51,8 +51,8 @@ def start(bot, update):
 
     reply_keyboard = share_or_find_keyboard
     user = update.message.from_user
-    update.message.reply_text('Приветствую, ' + user.first_name + '\n! Я - бот, который поможет '
-                              'Вам найти нужную поездку, или'
+    update.message.reply_text('Приветствую, ' + user.first_name + '!\n'
+                              'Я - бот, который поможет Вам найти нужную поездку, или'
                               ' подвезти соседей :)',
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False))
 
@@ -245,13 +245,13 @@ def select_ride(bot, update, user_data):
 
     outstr += 'Время отправления: {}'.format(selected_ride['ride_datetime']) + '\n'
 
-    outstr += 'Аккаунт в Телеграме для связи: @{}'.format(selected_ride['user_name']) + '\n'
+    outstr += 'Телеграм аккаунт водителя для связи: @{}'.format(selected_ride['user_name']) + '\n'
 
     if selected_ride['user_phonenumber'] != 'no phone number':
         phone_number =  selected_ride['user_phonenumber']
         if phone_number[:1] != '+':
             phone_number = '+' + phone_number
-        outstr += 'Телефон для связи: {}'.format(phone_number) + '\n'
+        outstr += 'Телефон водителя для связи: {}'.format(phone_number) + '\n'
 
 
     passengers_info = str(selected_ride['ride_passengers'] - selected_ride['requests_rides']) + ' из ' + str(selected_ride['ride_passengers'])
